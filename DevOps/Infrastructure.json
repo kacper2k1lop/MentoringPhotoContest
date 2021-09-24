@@ -1,0 +1,275 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Region": {
+      "type": "string",
+      "defaultValue": "eur",
+      "allowedValues": [
+        "eur",
+        "nam",
+        "apa",
+        "asg"
+      ]
+    },
+    "Country": {
+      "type": "string",
+      "defaultValue": "ww"
+    },
+    "Environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": [
+        "dev",
+        "test",
+        "uat",
+        "uat2",
+        "prd"
+      ]
+    },
+    "StgAccountType": {
+      "type": "string",
+      "defaultValue": "gs",
+      "metadata": {
+        "description": "Allowed values means General Purpose Standard or Premium Performance"
+      },
+      "allowedValues": [
+        "gs",
+        "gp"
+      ]
+    },
+    "ApplicationName": {
+      "type": "string",
+      "defaultValue": "mnt"
+    },
+    "siteName": {
+      "type": "string",
+      "defaultValue": "[concat('FuncApp-', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "The name of you Web Site."
+      }
+    },
+    "CognitiveServicesName": {
+      "type": "string",
+      "defaultValue": "6test123"
+    }
+  },
+  "variables": {
+    "StgAccountName": "[concat('sa', parameters('StgAccountType'), parameters('Region'), parameters('Country'), parameters('Environment'), parameters('ApplicationName'))]",
+    "hostingPlanName": "[concat('ap',  parameters('Region'), parameters('Country'), parameters('Environment'), parameters('ApplicationName'))]",
+    "hostingPlanNameFa": "[concat('apf',  parameters('Region'), parameters('Country'), parameters('Environment'), parameters('ApplicationName'))]",
+    "webAppName": "[concat('wa', parameters('Region'), parameters('Country'), parameters('Environment'), parameters('ApplicationName'))]",
+    "storageAccountid": "[resourceId('Microsoft.Storage/storageAccounts', variables('StgAccountName'))]",
+    "AppInsightsName": "AppIns",
+    "cognitiveservicesid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', parameters('CognitiveServicesName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('StgAccountName')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true,
+        "accessTier": "Hot"
+      },
+      "resources": [
+        {
+          "type": "blobServices/containers",
+          "apiVersion": "2021-02-01",
+          "name": "default/container",
+          "dependsOn": [
+            "[variables('StgAccountName')]"
+          ]
+        },
+        {
+          "type": "queueServices/queues",
+          "apiVersion": "2021-02-01",
+          "name": "default/queue",
+          "dependsOn": [
+            "[variables('StgAccountName')]"
+          ]
+        },
+        {
+          "type": "tableServices/tables",
+          "apiVersion": "2021-02-01",
+          "name": "default/table",
+          "dependsOn": [
+            "[variables('StgAccountName')]"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "[variables('hostingPlanNameFa')]",
+      "apiVersion": "2019-08-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "name": "[variables('hostingPlanNameFa')]",
+        "reserved": true
+      },
+      "kind": "linux",
+      "sku": {
+        "name": "Y1",
+        "tier": "Dynamic",
+        "size": "Y1",
+        "family": "Y",
+        "capacity": 0
+      },
+      "type": "Microsoft.Web/serverfarms"
+    },
+    {
+      "type": "microsoft.insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('AppInsightsName')]",
+      "location": "[resourceGroup().location]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "Flow_Type": "Redfield",
+        "IngestionMode": "ApplicationInsightsWithDiagnosticSettings"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2019-08-01",
+      "name": "[parameters('siteName')]",
+      "kind": "functionapp",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanNameFa'))]",
+        "[resourceId('Microsoft.insights/components', variables('AppInsightsName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('CognitiveServicesName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('StgAccountName'))]"
+      ],
+      "properties": {
+        "name": "[parameters('siteName')]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(variables('AppInsightsName')).InstrumentationKey]"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(variables('AppInsightsName')).ConnectionString]"
+            },
+            {
+              "name": "AZURE_STORAGE_CONNECTION_STRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('StgAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2019-06-01').keys[0].value, ';EndpointSuffix=core.windows.net')]"
+            },
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('StgAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2019-06-01').keys[0].value)]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~3"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "dotnet-isolated"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('StgAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2019-06-01').keys[0].value)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[concat(toLower(parameters('siteName')), 'b7ca')]"
+            },
+            {
+              "name": "COMPUTER_VISION_ENDPOINT",
+              "value": "[reference(variables('cognitiveservicesid'),'2021-04-30').endpoint]"
+            },
+            {
+              "name": "COMPUTER_VISION_SUBSCRIPTION_KEY",
+              "value": "[listKeys(variables('cognitiveservicesid'),'2016-02-01-preview').key1]"
+            }
+
+          ]
+        },
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanNameFa'))]",
+        "clientAffinityEnabled": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2019-08-01",
+      "name": "[variables('hostingPlanName')]",
+      "location": "[resourceGroup().location]",
+      "kind": "linux",
+      "properties": {
+        "reserved": true
+      },
+      "sku": {
+        "Tier": "Basic",
+        "Name": "B1"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('siteName'))]"
+      ]
+    },
+    {
+      "name": "[variables('webAppName')]",
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2020-12-01",
+      "location": "[resourceGroup().location]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "name": "[variables('WebAppName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "alwaysOn": true,
+          "netFrameworkVersion": "v4.0",
+          "scmType": "VSTSRM",
+          "linuxFxVersion": "DOTNETCORE|5.0",
+          "use32BitWorkerProcess": true,
+          "ftpsState": "FtpsOnly",
+          "minTlsVersion": "1.2",
+          "http20Enabled": false,
+          "appSettings": [
+            {
+              "name": "AZURE_STORAGE_CONNECTION_STRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('StgAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2019-06-01').keys[0].value, ';EndpointSuffix=core.windows.net')]"
+            },
+            {
+              "name": "AZURE_STORAGE_CONTAINER",
+              "value": "container"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2021-04-30",
+      "name": "[parameters('CognitiveServicesName')]",
+      "location": "westeurope",
+      "sku": {
+        "name": "S0"
+      },
+      "kind": "CognitiveServices",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "apiProperties": {},
+        "customSubDomainName": "[parameters('CognitiveServicesName')]",
+        "publicNetworkAccess": "Enabled"
+      }
+    }
+  ]
+}

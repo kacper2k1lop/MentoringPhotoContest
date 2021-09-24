@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31410.357
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MentoringPhotoContest", "MentoringPhotoContest\MentoringPhotoContest.csproj", "{717D92D9-7835-48FE-AEF5-5A632BCD7BD3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionApp", "FunctionApp\FunctionApp.csproj", "{4F3E3F5C-9024-4DE8-941B-3849B0AEF6B2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{717D92D9-7835-48FE-AEF5-5A632BCD7BD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{717D92D9-7835-48FE-AEF5-5A632BCD7BD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{717D92D9-7835-48FE-AEF5-5A632BCD7BD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{717D92D9-7835-48FE-AEF5-5A632BCD7BD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F3E3F5C-9024-4DE8-941B-3849B0AEF6B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F3E3F5C-9024-4DE8-941B-3849B0AEF6B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F3E3F5C-9024-4DE8-941B-3849B0AEF6B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F3E3F5C-9024-4DE8-941B-3849B0AEF6B2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AF082DF5-E101-4BBC-A99C-C7C654C2210E}
+	EndGlobalSection
+EndGlobal

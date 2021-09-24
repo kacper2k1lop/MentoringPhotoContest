@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "FunctionApp": {
+      "commandName": "Project",
+      "environmentVariables": {
+      }
+    }
+  }
+}
